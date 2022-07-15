@@ -44,7 +44,7 @@ def get_face_encoding_streams(video_frames, similarity_tol=0.6):
 
     return encoding_streams
 
-        
+
 
 def generate_dataset(data_path, parent_save_path):
     """
@@ -108,6 +108,7 @@ def generate_dataset(data_path, parent_save_path):
 
             # delete dummy file
             os.remove(dummy_path)
+
 
 
 if __name__ == "__main__":
