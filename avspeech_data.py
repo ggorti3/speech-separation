@@ -113,9 +113,23 @@ def generate_dataset(data_path, parent_save_path):
 
 if __name__ == "__main__":
 
-    generate_dataset(
-        data_path="../AVSpeech/avspeech_test.csv",
-        parent_save_path="../avspeech_data"
-    )
+    # generate_dataset(
+    #     data_path="../AVSpeech/avspeech_test.csv",
+    #     parent_save_path="../avspeech_data"
+    # )
 
-    pass
+    url = "https://www.youtube.com/watch?v={}".format("t28gqmG9IwM")
+    start = "00:01:45"
+    end = "00:02:30"
+
+    # find true video url
+    with youtube_dl.YoutubeDL({'format': 'best'}) as ydl:
+        try:
+            result = ydl.extract_info(url, download=False)
+        except:
+            print("Failed to load video information")
+
+    true_urls = [f['url'] for f in result['formats'] if f['acodec'] != 'none' and f['vcodec'] != 'none']
+    formats = [f for f in result['formats'] if f['acodec'] != 'none' and f['vcodec'] != 'none']
+    true_url = true_urls[-1]
+    subprocess.run('ffmpeg -ss {} -to {} -i "{}" {}'.format(start, end, true_url, "../sample_data/sample_vid2.mp4"), shell=True)
