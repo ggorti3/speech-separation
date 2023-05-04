@@ -86,7 +86,7 @@ def generate_dataset(data_path, parent_save_path):
             os.mkdir(save_path)
 
             # download video clip into dummy file using ffmpeg
-            subprocess.run('ffmpeg -ss {} -to {} -i "{}" -filter:v fps={} {}'.format(start, end, true_url, FPS, dummy_path), shell=True)
+            subprocess.run('ffmpeg -nostdin -ss {} -to {} -i "{}" -filter:v fps={} {}'.format(start, end, true_url, FPS, dummy_path), shell=True)
 
             # save video clip information
             info = skvideo.io.ffprobe(dummy_path)
@@ -104,7 +104,7 @@ def generate_dataset(data_path, parent_save_path):
 
             # save audio as seperate .wav file
             audio_path = os.path.join(save_path, "audio.wav")
-            subprocess.run("ffmpeg -i {} -vn {}".format(dummy_path, audio_path), shell=True)
+            subprocess.run("ffmpeg -nostdin -i {} -vn {}".format(dummy_path, audio_path), shell=True)
 
             # delete dummy file
             os.remove(dummy_path)
