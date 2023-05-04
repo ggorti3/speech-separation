@@ -12,37 +12,24 @@ from pprint import pprint, pformat
 
 def get_face_encoding_streams(video_frames, similarity_tol=0.6):
     """
-    given video frames array, return full stream arrays of face encodings (with frame number) of all distinct faces detected
+    given video frames array, return face encoding stream (we assume only one face per video)
     """
-    detections = face_recognition.batch_face_locations(list(video_frames), batch_size=8, number_of_times_to_upsample=1)
-    known_faces_list = []
-    encoding_streams = []
+    detections = face_recognition.batch_face_locations(list(video_frames), batch_size=16, number_of_times_to_upsample=1)
+
+    encoding_stream = []
     for i, frame in enumerate(video_frames):
         encodings = face_recognition.face_encodings(
             frame, 
             known_face_locations=detections[i],
-            model="small"
+            model="large"
         )
-        for encoding in encodings:
-            if known_faces_list:
-                dists = face_recognition.face_distance(known_faces_list, encoding)
-                if np.all(dists > similarity_tol):
-                    known_faces_list.append(encoding)
-                    aug_encoding = np.concatenate([np.array([i]), encoding])
-                    encoding_streams.append([aug_encoding])
-                else:
-                    idx = np.argmin(dists).item()
-                    aug_encoding = np.concatenate([np.array([i]), encoding])
-                    encoding_streams[idx].append(aug_encoding)
 
-            else:
-                known_faces_list.append(encoding)
-                aug_encoding = np.concatenate([np.array([i]), encoding])
-                encoding_streams.append([aug_encoding])
-    
-    encoding_streams = [np.stack(stream) for stream in encoding_streams]
+        if len(encodings) == 0:
+            encoding_stream.append(np.zeros((128,)))
+        else:
+            encoding_stream.append(encodings[0])
 
-    return encoding_streams
+    return encoding_stream
 
 
 
@@ -97,10 +84,9 @@ def generate_dataset(data_path, parent_save_path):
             
             # get video frames, process with face_recognition, save streams of face encodings as individual csv files
             video_frames = skvideo.io.vread(dummy_path)
-            encoding_streams = get_face_encoding_streams(video_frames)
-            for i, stream in enumerate(encoding_streams):
-                stream_path = os.path.join(save_path, "stream{}.csv".format(i))
-                np.savetxt(stream_path, encoding_streams[i], delimiter=",")
+            stream = get_face_encoding_streams(video_frames)
+            stream_path = os.path.join(save_path, "encoding_stream.csv")
+            np.savetxt(stream_path, stream, delimiter=",")
 
             # save audio as seperate .wav file
             audio_path = os.path.join(save_path, "audio.wav")
