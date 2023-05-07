@@ -23,7 +23,7 @@ class TwoSpeakerCPNet(nn.Module):
 
     def forward(self, z, s1, s2):
         """
-        z.shape = (N, 257, 222, 2)
+        z.shape = (N, 257, 295, 2)
         si.shape = (N, 75, 128)
         """
 
