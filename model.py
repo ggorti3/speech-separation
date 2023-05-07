@@ -9,13 +9,13 @@ class TwoSpeakerCPNet(nn.Module):
         super().__init__()
         self.visual_layers = VisualModule()
         self.audio_layers = AudioModule()
-        self.backbone = nn.LSTM(input_size=2184, hidden_size=200, batch_first=True, bidirectional=True)
+        self.backbone = nn.LSTM(input_size=8*257 + 128, hidden_size=200, batch_first=True, bidirectional=True)
         self.linear1 = nn.Linear(400, 600)
-        self.bn1 = nn.BatchNorm1d(num_features=222)
+        self.bn1 = nn.BatchNorm1d(num_features=295)
         self.linear2 = nn.Linear(600, 600)
-        self.bn2 = nn.BatchNorm1d(num_features=222)
+        self.bn2 = nn.BatchNorm1d(num_features=295)
         self.linear3 = nn.Linear(600, 600)
-        self.bn3 = nn.BatchNorm1d(num_features=222)
+        self.bn3 = nn.BatchNorm1d(num_features=295)
         self.mask_head1 = nn.Linear(600, 257 * 2)
         self.mask_head2 = nn.Linear(600, 257 * 2)
 
@@ -29,15 +29,15 @@ class TwoSpeakerCPNet(nn.Module):
 
         zp = torch.permute(z, (0, 3, 1, 2))
         a = self.audio_layers(zp)
-        a = a.reshape(-1, 8 * 257, 222)
+        a = a.reshape(-1, 8 * 257, 295)
 
         s1 = torch.transpose(s1, 1, 2)
         v1 = self.visual_layers(s1)
-        v1 = F.interpolate(v1, size=222, mode='nearest')
+        v1 = F.interpolate(v1, size=295, mode='nearest')
 
         s2 = torch.transpose(s2, 1, 2)
         v2 = self.visual_layers(s2)
-        v2 = F.interpolate(v2, size=222, mode='nearest')
+        v2 = F.interpolate(v2, size=295, mode='nearest')
 
         x = torch.cat([a, v1, v2], dim=1)
         x = x.transpose(1, 2)
@@ -47,10 +47,10 @@ class TwoSpeakerCPNet(nn.Module):
         x = self.bn3(self.activation(self.linear3(x)))
 
         m1 = self.mask_head1(x)
-        m1 = m1.reshape(-1, 222, 257, 2)
+        m1 = m1.reshape(-1, 295, 257, 2)
         m1 = m1.transpose(1, 2)
         m2 = self.mask_head1(x)
-        m2 = m2.reshape(-1, 222, 257, 2)
+        m2 = m2.reshape(-1, 295, 257, 2)
         m2 = m2.transpose(1, 2)
 
         # complex multiplication
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     dataset = TwoSpeakerData("../avspeech_data/")
 
     iterator = iter(dataset)
-    z, z1, z2, s1, s2 = next(iterator)
+    z, audio1, audio2, z1, z2, s1, s2 = next(iterator)
     z = z.unsqueeze(0)
     s1 = s1.unsqueeze(0)
     s2 = s2.unsqueeze(0)

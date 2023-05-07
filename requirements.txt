@@ -1,4 +1,6 @@
-face_recognition==1.3.0
-numpy==1.21.6
-scikit_video==1.1.11
-youtube_dl==2021.12.17
+face_recognition
+numpy
+scikit_video
+youtube_dl
+tqdm
+torch
