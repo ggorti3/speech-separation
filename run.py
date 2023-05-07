@@ -23,18 +23,18 @@ def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr):
             s2 = s2.to(DEVICE)
             z1_hat, z2_hat = model(z, s1, s2)
 
-            loss = F.mse_loss(z1_hat, z1, reduction="sum") + F.mse_loss(z2_hat, z2, reduction="sum")
+            loss = (F.mse_loss(z1_hat, z1, reduction="sum") + F.mse_loss(z2_hat, z2, reduction="sum")) / z.shape[0]
             loss.backward()
             optimizer.step()
 
             with torch.no_grad():
                 cum_loss += loss
-                print("Running Loss: {}".format(cum_loss / (i + 1)))
-            break
 
         with torch.no_grad():
+            print("Epoch {}".format(e))
+            print("    Train Running Loss: {}".format(cum_loss / len(train_dataloader)))
             avg_sdr = two_speaker_evaluate(model, val_dataloader)
-            print(avg_sdr)
+            print("    Val Average sdr: {}".format(avg_sdr))
 
 def two_speaker_evaluate(model, val_dataloader):
     model.eval()
@@ -55,8 +55,7 @@ def two_speaker_evaluate(model, val_dataloader):
 
         n_samples += sdr1.shape[0] + sdr2.shape[0]
         cum_sdr += (torch.sum(sdr1) + torch.sum(sdr2)).item()
-    
-    avg_sdr = cum_sdr / n_samples if n_samples > 0 else 0
+    avg_sdr = (cum_sdr / n_samples) if n_samples > 0 else 0
     return avg_sdr
 
 if __name__ == "__main__":
