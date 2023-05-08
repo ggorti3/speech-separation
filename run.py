@@ -67,14 +67,16 @@ if __name__ == "__main__":
 
     lr = 3e-5
     epochs = 1
-    batch_size = 12
+    batch_size = 30
 
     train_dataset = TwoSpeakerData("data/train_dataset")
     train_dataloader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        collate_fn=train_dataset.collate_fn
+        collate_fn=train_dataset.collate_fn,
+        num_workers=4,
+        pin_memory=True
     )
 
     val_dataset = TwoSpeakerData("data/val_dataset")
@@ -82,7 +84,9 @@ if __name__ == "__main__":
         dataset=val_dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=val_dataset.collate_fn
+        collate_fn=val_dataset.collate_fn,
+        num_workers=4,
+        pin_memory=True
     )
 
     model = TwoSpeakerCPNet()

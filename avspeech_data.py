@@ -16,20 +16,17 @@ def get_face_encoding_streams(video_frames, x0, y0):
     ymax = video_frames.shape[1]
     xmax = video_frames.shape[2]
 
-    # t1 = time.time()
-    # detections = face_recognition.batch_face_locations(list(video_frames), batch_size=20, number_of_times_to_upsample=1)
-    # t2 = time.time()
-    # print("Time to get detections: {}".format(t2 - t1))
+    t1 = time.time()
+    detections = face_recognition.batch_face_locations(list(video_frames), batch_size=20, number_of_times_to_upsample=1)
+    t2 = time.time()
+    print("Time to get detections: {}".format(t2 - t1))
 
     encoding_stream = []
     for i, frame in enumerate(video_frames):
-        detections_i = face_recognition.face_locations(video_frames[i])
-        
         # get the detection closest to x0, y0
         best_detection = None
         min_dist = float("inf")
-        #for d in detections[i]:
-        for d in detections_i:
+        for d in detections[i]:
             x = d[1] - d[3]
             y = d[2] - d[0]
             x = x / xmax

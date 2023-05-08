@@ -2,15 +2,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-#torch.set_default_dtype(torch.float)
+torch.set_default_dtype(torch.float)
 
 class TwoSpeakerCPNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.visual_layers = VisualModule()
         self.audio_layers = AudioModule()
-        #self.backbone = LSTMBackbone()
-        self.backbone = TransformerBackbone()
+        self.backbone = LSTMBackbone()
+        #self.backbone = TransformerBackbone()
         self.linear1 = nn.Linear(400, 600)
         self.bn1 = nn.BatchNorm1d(num_features=295)
         self.linear2 = nn.Linear(600, 600)
@@ -74,52 +74,56 @@ class AudioModule(nn.Module):
     """
     def __init__(self, ):
         super().__init__()
-        convs = [
+        self.layer = nn.Sequential(
             nn.Conv2d(2, 96, kernel_size=(1, 7), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=(7, 1), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, dilation=(2, 1), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, dilation=(4, 1), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, dilation=(8, 1), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, dilation=(16, 1), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, dilation=(32, 1), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, dilation=(2, 2), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, dilation=(4, 4), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, dilation=(8, 8), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, dilation=(16, 16), padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
             nn.Conv2d(96, 96, kernel_size=5, dilation=(32, 32), padding="same"),
-            nn.Conv2d(96, 8, kernel_size=1, padding="same")
-        ]
-        self.convs = nn.ModuleList(convs)
-
-        bns = [
+            nn.ReLU(),
             nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(96),
-            nn.BatchNorm2d(8)
-        ]
-        self.bns = nn.ModuleList(bns)
-
-        self.activation = nn.ReLU()
+            nn.Conv2d(96, 8, kernel_size=1, padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm2d(8),
+        )
     
     def forward(self, x):
-        for i in range(len(self.convs)):
-            conv = self.convs[i]
-            bn = self.bns[i]
-            x = bn(self.activation(conv(x)))
-        return x
+        return self.layer(x)
 
 class VisualModule(nn.Module):
     """
@@ -128,34 +132,29 @@ class VisualModule(nn.Module):
     def __init__(self, ):
         super().__init__()
 
-        convs = [
+        self.layer = nn.Sequential(
             nn.Conv1d(128, 64, kernel_size=7, padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm1d(64),
             nn.Conv1d(64, 64, kernel_size=5, padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm1d(64),
             nn.Conv1d(64, 64, kernel_size=5, dilation=2, padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm1d(64),
             nn.Conv1d(64, 64, kernel_size=5, dilation=4, padding="same"),
+            nn.ReLU(),
+            nn.BatchNorm1d(64),
             nn.Conv1d(64, 64, kernel_size=5, dilation=8, padding="same"),
-            nn.Conv1d(64, 64, kernel_size=5, dilation=16, padding="same")
-        ]
-        self.convs = nn.ModuleList(convs)
-
-        bns = [
+            nn.ReLU(),
             nn.BatchNorm1d(64),
+            nn.Conv1d(64, 64, kernel_size=5, dilation=16, padding="same"),
+            nn.ReLU(),
             nn.BatchNorm1d(64),
-            nn.BatchNorm1d(64),
-            nn.BatchNorm1d(64),
-            nn.BatchNorm1d(64),
-            nn.BatchNorm1d(64)
-        ]
-        self.bns = nn.ModuleList(bns)
-
-        self.activation = nn.ReLU()
+        )
     
     def forward(self, x):
-        for i in range(len(self.convs)):
-            conv = self.convs[i]
-            bn = self.bns[i]
-            x = bn(self.activation(conv(x)))
-        return x
+        return self.layer(x)
 
 class LSTMBackbone(nn.Module):
     def __init__(self, ):
@@ -172,9 +171,11 @@ class TransformerBackbone(nn.Module):
         self.linear = nn.Linear(8*257 + 128, 400)
         layer = nn.TransformerEncoderLayer(d_model=400, nhead=8, dim_feedforward=1024, batch_first=True)
         self.encoder = nn.TransformerEncoder(layer, 1)
+
+        self.activation = nn.ReLU()
     
     def forward(self, x):
-        x = self.linear(x)
+        x = self.activation(self.linear(x))
         x = self.encoder(x)
         return x
     
@@ -182,7 +183,7 @@ if __name__ == "__main__":
     from synthetic_data import TwoSpeakerData
 
     model = TwoSpeakerCPNet()
-    dataset = TwoSpeakerData("../avspeech_data/")
+    dataset = TwoSpeakerData("data/train_dataset")
 
     iterator = iter(dataset)
     z, audio1, audio2, z1, z2, s1, s2 = next(iterator)

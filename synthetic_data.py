@@ -8,7 +8,7 @@ import torch
 from torch import stft, hann_window
 from torch.utils.data import Dataset
 
-#torch.set_default_dtype(torch.float)
+torch.set_default_dtype(torch.float)
 
 class TwoSpeakerData(Dataset):
     def __init__(self, dataset_path):
