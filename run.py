@@ -5,7 +5,8 @@ import torch.optim as optim
 from torchmetrics.functional.audio import signal_distortion_ratio
 from tqdm import tqdm
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Using device {}".format(DEVICE))
 
 def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr):
 
@@ -64,22 +65,31 @@ if __name__ == "__main__":
     from model import TwoSpeakerCPNet
     from synthetic_data import TwoSpeakerData
 
-    dataset = TwoSpeakerData("../avspeech_data/")
-    dataloader = DataLoader(
-        dataset=dataset,
-        batch_size=2,
-        shuffle=True,
-        collate_fn=dataset.collate_fn
-    )
-
     lr = 3e-5
     epochs = 1
+    batch_size = 12
+
+    train_dataset = TwoSpeakerData("data/train_dataset")
+    train_dataloader = DataLoader(
+        dataset=train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=train_dataset.collate_fn
+    )
+
+    val_dataset = TwoSpeakerData("data/val_dataset")
+    val_dataloader = DataLoader(
+        dataset=val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=val_dataset.collate_fn
+    )
 
     model = TwoSpeakerCPNet()
     two_speaker_train(
         model=model,
-        train_dataloader=dataloader,
-        val_dataloader=dataloader,
+        train_dataloader=train_dataloader,
+        val_dataloader=val_dataloader,
         epochs=epochs,
         lr=lr
     )

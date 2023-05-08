@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-torch.set_default_dtype(torch.double)
+#torch.set_default_dtype(torch.float)
 
 class TwoSpeakerCPNet(nn.Module):
     def __init__(self):
@@ -73,7 +73,7 @@ class AudioModule(nn.Module):
     """
     def __init__(self, ):
         super().__init__()
-        self.convs = [
+        convs = [
             nn.Conv2d(2, 96, kernel_size=(1, 7), padding="same"),
             nn.Conv2d(96, 96, kernel_size=(7, 1), padding="same"),
             nn.Conv2d(96, 96, kernel_size=5, padding="same"),
@@ -90,8 +90,9 @@ class AudioModule(nn.Module):
             nn.Conv2d(96, 96, kernel_size=5, dilation=(32, 32), padding="same"),
             nn.Conv2d(96, 8, kernel_size=1, padding="same")
         ]
+        self.convs = nn.ModuleList(convs)
 
-        self.bns = [
+        bns = [
             nn.BatchNorm2d(96),
             nn.BatchNorm2d(96),
             nn.BatchNorm2d(96),
@@ -108,6 +109,7 @@ class AudioModule(nn.Module):
             nn.BatchNorm2d(96),
             nn.BatchNorm2d(8)
         ]
+        self.bns = nn.ModuleList(bns)
 
         self.activation = nn.ReLU()
     
@@ -125,7 +127,7 @@ class VisualModule(nn.Module):
     def __init__(self, ):
         super().__init__()
 
-        self.convs = [
+        convs = [
             nn.Conv1d(128, 64, kernel_size=7, padding="same"),
             nn.Conv1d(64, 64, kernel_size=5, padding="same"),
             nn.Conv1d(64, 64, kernel_size=5, dilation=2, padding="same"),
@@ -133,8 +135,9 @@ class VisualModule(nn.Module):
             nn.Conv1d(64, 64, kernel_size=5, dilation=8, padding="same"),
             nn.Conv1d(64, 64, kernel_size=5, dilation=16, padding="same")
         ]
+        self.convs = nn.ModuleList(convs)
 
-        self.bns = [
+        bns = [
             nn.BatchNorm1d(64),
             nn.BatchNorm1d(64),
             nn.BatchNorm1d(64),
@@ -142,6 +145,7 @@ class VisualModule(nn.Module):
             nn.BatchNorm1d(64),
             nn.BatchNorm1d(64)
         ]
+        self.bns = nn.ModuleList(bns)
 
         self.activation = nn.ReLU()
     

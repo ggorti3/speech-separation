@@ -8,7 +8,7 @@ import torch
 from torch import stft, hann_window
 from torch.utils.data import Dataset
 
-torch.set_default_dtype(torch.double)
+#torch.set_default_dtype(torch.float)
 
 class TwoSpeakerData(Dataset):
     def __init__(self, dataset_path):
@@ -29,15 +29,17 @@ class TwoSpeakerData(Dataset):
         path2 = self.paths[j]
 
         # load encodings and frequency
-        encoding_stream1 = np.loadtxt(os.path.join(path1, "encoding_stream.csv"), delimiter=",")
+        encoding_stream1 = np.loadtxt(os.path.join(path1, "encoding_stream.csv"), delimiter=",", dtype=np.float32)
         freq1, audio1 = scipy.io.wavfile.read(os.path.join(path1, "audio.wav"))
         # verify audio frequency and length
         assert freq1 == 44100, "{} frequency is not 44100".format(path1)
         assert audio1.shape[0] >= 132300 and encoding_stream1.shape[0] >= 75, "{} is shorter than 3 seconds".format(path1)
         # normalize to float in [0, 1]
-        audio1 = audio1.astype(np.float64) / 32768
+        audio1 = audio1.astype(np.float32) / 32768
         # resample to 1/3rd frequency
-        audio1 = audio1[::3, 0]
+        audio1 = audio1[::3]
+        if len(audio1.shape) == 2:
+            audio1 = audio1[:, 0]
         # uniformly sample random 3 second length
         i = random.randrange(0, ((audio1.shape[0] - 44100) // (588)) + 1)
         audio1 = audio1[588*i:588*i+44100]
@@ -57,12 +59,14 @@ class TwoSpeakerData(Dataset):
         z1 = torch.view_as_real(z1)
 
         # repeat for second clip
-        encoding_stream2 = np.loadtxt(os.path.join(path2, "encoding_stream.csv"), delimiter=",")
+        encoding_stream2 = np.loadtxt(os.path.join(path2, "encoding_stream.csv"), delimiter=",", dtype=np.float32)
         freq2, audio2 = scipy.io.wavfile.read(os.path.join(path2, "audio.wav"))
         assert freq2 == 44100, "{} frequency is not 44100".format(path2)
         assert audio2.shape[0] >= 132300 and encoding_stream2.shape[0] >= 75, "{} is shorter than 3 seconds".format(path2)
-        audio2 = audio2.astype(np.float64) / 32768
-        audio2 = audio2[::3, 0]
+        audio2 = audio2.astype(np.float32) / 32768
+        audio2 = audio2[::3]
+        if len(audio2.shape) == 2:
+            audio2 = audio2[:, 0]
         i = random.randrange(0, ((audio2.shape[0] - 44100) // (588)) + 1)
         audio2 = audio2[588*i:588*i+44100]
         encoding_stream2 = encoding_stream2[i:i+75]
