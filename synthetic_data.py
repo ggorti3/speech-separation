@@ -44,9 +44,12 @@ class TwoSpeakerData(Dataset):
         if len(audio1.shape) == 2:
             audio1 = audio1[:, 0]
         # uniformly sample random 3 second length
-        i = random.randrange(0, ((audio1.shape[0] - 44100) // (588)) + 1)
-        audio1 = audio1[588*i:588*i+44100]
-        encoding_stream1 = encoding_stream1[i:i+75]
+        i1 = random.randrange(
+            0,
+            min(encoding_stream1.shape[0] - 75, ((audio1.shape[0] - 44100) // 588)) + 1
+        )
+        audio1 = audio1[588*i1:588*i1+44100]
+        encoding_stream1 = encoding_stream1[i1:i1+75]
         # perform stft
         audio1 = torch.tensor(audio1)
         z1 = stft(
@@ -69,9 +72,12 @@ class TwoSpeakerData(Dataset):
         audio2 = audio2[::3]
         if len(audio2.shape) == 2:
             audio2 = audio2[:, 0]
-        i = random.randrange(0, ((audio2.shape[0] - 44100) // (588)) + 1)
-        audio2 = audio2[588*i:588*i+44100]
-        encoding_stream2 = encoding_stream2[i:i+75]
+        i2 = random.randrange(
+            0,
+            min(encoding_stream2.shape[0] - 75, ((audio2.shape[0] - 44100) // 588)) + 1
+        )
+        audio2 = audio2[588*i2:588*i2+44100]
+        encoding_stream2 = encoding_stream2[i2:i2+75]
         audio2 = torch.tensor(audio2)
         z2 = stft(
             audio2,
@@ -82,7 +88,7 @@ class TwoSpeakerData(Dataset):
             onesided=True,
             return_complex=True
         )
-        z2 = torch.view_as_real(z2)
+        z2 = torch.view_as_real(z2)     
 
         z = z1 + z2
         s1 = torch.tensor(encoding_stream1)
@@ -104,20 +110,60 @@ class TwoSpeakerData(Dataset):
         return var_tup
 
 if __name__ == "__main__":
+    from torch.utils.data import DataLoader
     from torch import istft
+    import time
+    from tqdm import tqdm
 
+    # n_fft = 512
+    # win_length = 300
+    # hop_length = 150
+    # dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
+    # iterator = iter(dataset)
+    # for i in range(102):
+    #     next(iterator)
+    # z, _, _, _, _, _, _ = next(iterator)
+    # z = torch.complex(z[:, :, 0], z[:, :, 1])
+    # audio = istft(z, n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
+    # audio = (audio * 32768).type(torch.int16)
+    # audio = audio.numpy()
+    # print(z.shape)
+    # print(audio.shape)
+    # scipy.io.wavfile.write("sample.wav", 14700, audio)
+
+    batch_size = 50
     n_fft = 512
     win_length = 300
     hop_length = 150
-    dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
-    iterator = iter(dataset)
-    for i in range(102):
-        next(iterator)
-    z, _, _, _, _, _, _ = next(iterator)
-    z = torch.complex(z[:, :, 0], z[:, :, 1])
-    audio = istft(z, n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
-    audio = (audio * 32768).type(torch.int16)
-    audio = audio.numpy()
-    print(z.shape)
-    print(audio.shape)
-    scipy.io.wavfile.write("sample.wav", 14700, audio)
+    dim_f = 257
+    dim_t = 295
+
+    train_dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
+    train_dataloader = DataLoader(
+        dataset=train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=train_dataset.collate_fn,
+        num_workers=4,
+        pin_memory=True
+    )
+
+    val_dataset = TwoSpeakerData("data/val_dataset", n_fft, win_length, hop_length)
+    val_dataloader = DataLoader(
+        dataset=val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=val_dataset.collate_fn,
+        num_workers=4,
+        pin_memory=True
+    )
+
+    t1 = time.time()
+    # for i, _ in tqdm(enumerate(train_dataloader)):
+    #     _
+    t2 = time.time()
+    print("{} seconds to iterate train dataloader".format(t2 - t1))
+    for i, _ in tqdm(enumerate(val_dataloader)):
+        _
+    t3 = time.time()
+    print("{} seconds to iterate val dataloader".format(t3 - t2))

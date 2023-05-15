@@ -131,4 +131,4 @@ def clean_data(data_path):
 
 
 if __name__ == "__main__":
-    clean_data("../avspeech_data/")
+    clean_data("data/train_dataset")

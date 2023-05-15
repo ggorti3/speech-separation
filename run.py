@@ -41,7 +41,7 @@ def two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length):
     model.eval()
     cum_sdr = 0
     n_samples = 0
-    for i, (z, audio1, audio2, _, _, s1, s2) in enumerate(val_dataloader):
+    for i, (z, audio1, audio2, _, _, s1, s2) in tqdm(enumerate(val_dataloader)):
         z = z.to(DEVICE)
         audio1 = audio1.to(DEVICE)
         audio2 = audio2.to(DEVICE)
