@@ -117,12 +117,18 @@ def generate_dataset(data_path, parent_save_path):
             line = f.readline()
 
 def clean_data(data_path):
-    pass
+    count = 0
+    for root, dirs, _ in os.walk(data_path, topdown=False):
+        for name in dirs:
+            dir_path = os.path.join(root, name)
+            stream_path = os.path.join(dir_path, "encoding_stream.csv")
+            with open(stream_path, "r") as f:
+                num_encodings = len(f.readlines())
+                if num_encodings < 75:
+                    count += 1
+                    print("oof")
+    print("number of files that are too short: {}".format(count))
 
 
-# if __name__ == "__main__":
-
-#     generate_dataset(
-#         data_path="../AVSpeech/avspeech_test.csv",
-#         parent_save_path="../avspeech_data"
-#     )
+if __name__ == "__main__":
+    clean_data("../avspeech_data/")
