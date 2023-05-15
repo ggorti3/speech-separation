@@ -13,8 +13,9 @@ class TwoSpeakerRCPNet(nn.Module):
         dim_h = 128 + 2 * (dim_f - 1)
         layer = nn.TransformerEncoderLayer(d_model=dim_h, nhead=8, dim_feedforward=1024, batch_first=True)
         self.encoder = nn.TransformerEncoder(layer, 1)
+        #self.lstm = nn.LSTM(input_size=dim_h, hidden_size=dim_h, batch_first=True, bidirectional=True)
 
-        self.linear1 = nn.Linear(dim_h, 512)
+        self.linear1 = nn.Linear(2 * dim_h, 512)
         self.bn1 = nn.BatchNorm1d(num_features=dim_t)
         self.linear2 = nn.Linear(512, 512)
         self.bn2 = nn.BatchNorm1d(num_features=dim_t)
@@ -49,7 +50,11 @@ class TwoSpeakerRCPNet(nn.Module):
 
         x = torch.cat([a, v1, v2], dim=1)
         x = x.transpose(1, 2)
+
+
         x = self.encoder(x)
+        #x, (_, _) = self.lstm(x)
+
         x = self.bn1(self.activation(self.linear1(x)))
         x = self.bn2(self.activation(self.linear2(x)))
         x = self.bn3(self.activation(self.linear3(x)))

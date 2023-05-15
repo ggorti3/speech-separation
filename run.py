@@ -8,9 +8,7 @@ from tqdm import tqdm
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device {}".format(DEVICE))
 
-def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft, win_length, hop_length):
-
-    model = model.to(DEVICE)
+def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft, win_length, hop_length, save_path):
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     for e in range(epochs):
@@ -31,11 +29,19 @@ def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft
             with torch.no_grad():
                 cum_loss += loss
 
+                if i % 50000 == 0:
+                    print("Train Running Loss: {}".format(cum_loss / (i + 1)))
+
+            if i == 5:
+                break
+
         with torch.no_grad():
             print("Epoch {}".format(e))
             print("    Train Running Loss: {}".format(cum_loss / len(train_dataloader)))
             avg_sdr = two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length)
             print("    Val Average sdr: {}".format(avg_sdr))
+
+            torch.save(model.state_dict(), save_path + "rcpnet_epoch{}.pt".format(e))
 
 def two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length):
     model.eval()
@@ -43,16 +49,17 @@ def two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length):
     n_samples = 0
     for i, (z, audio1, audio2, _, _, s1, s2) in tqdm(enumerate(val_dataloader)):
         z = z.to(DEVICE)
-        audio1 = audio1.to(DEVICE)
-        audio2 = audio2.to(DEVICE)
         s1 = s1.to(DEVICE)
         s2 = s2.to(DEVICE)
         z1_hat, z2_hat = model(z, s1, s2)
+
+        z1_hat = z1_hat.detach().cpu()
+        z2_hat = z2_hat.detach().cpu()
         audio1_hat = torch.istft(torch.view_as_complex(z1_hat), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
         audio2_hat = torch.istft(torch.view_as_complex(z2_hat), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
 
-        sdr1 = signal_distortion_ratio(audio1_hat, audio1)
-        sdr2 = signal_distortion_ratio(audio2_hat, audio2)
+        sdr1 = signal_distortion_ratio(audio1_hat, audio1, load_diag=1e-6)
+        sdr2 = signal_distortion_ratio(audio2_hat, audio2, load_diag=1e-6)
 
         n_samples += sdr1.shape[0] + sdr2.shape[0]
         cum_sdr += (torch.sum(sdr1) + torch.sum(sdr2)).item()
@@ -96,6 +103,7 @@ if __name__ == "__main__":
     )
 
     model = TwoSpeakerRCPNet(dim_f, dim_t)
+    model = model.to(DEVICE)
     two_speaker_train(
         model=model,
         train_dataloader=train_dataloader,
@@ -104,7 +112,8 @@ if __name__ == "__main__":
         lr=lr,
         n_fft=n_fft,
         win_length=win_length,
-        hop_length=hop_length
+        hop_length=hop_length,
+        save_path = "./"
     )
     
 
