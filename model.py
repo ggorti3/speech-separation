@@ -5,22 +5,25 @@ import torch.nn.functional as F
 torch.set_default_dtype(torch.float)
 
 class TwoSpeakerCPNet(nn.Module):
-    def __init__(self):
+    def __init__(self, dim_f, dim_t):
         super().__init__()
         self.visual_layers = VisualModule()
         self.audio_layers = AudioModule()
-        self.backbone = LSTMBackbone()
-        #self.backbone = TransformerBackbone()
+        #self.backbone = LSTMBackbone(dim_f)
+        self.backbone = TransformerBackbone(dim_f)
         self.linear1 = nn.Linear(400, 600)
-        self.bn1 = nn.BatchNorm1d(num_features=295)
+        self.bn1 = nn.BatchNorm1d(num_features=dim_t)
         self.linear2 = nn.Linear(600, 600)
-        self.bn2 = nn.BatchNorm1d(num_features=295)
+        self.bn2 = nn.BatchNorm1d(num_features=dim_t)
         self.linear3 = nn.Linear(600, 600)
-        self.bn3 = nn.BatchNorm1d(num_features=295)
-        self.mask_head1 = nn.Linear(600, 257 * 2)
-        self.mask_head2 = nn.Linear(600, 257 * 2)
+        self.bn3 = nn.BatchNorm1d(num_features=dim_t)
+        self.mask_head1 = nn.Linear(600, dim_f * 2)
+        self.mask_head2 = nn.Linear(600, dim_f * 2)
 
         self.activation = nn.ReLU()
+
+        self.dim_f = dim_f
+        self.dim_t = dim_t
 
     def forward(self, z, s1, s2):
         """
@@ -30,15 +33,15 @@ class TwoSpeakerCPNet(nn.Module):
 
         zp = torch.permute(z, (0, 3, 1, 2))
         a = self.audio_layers(zp)
-        a = a.reshape(-1, 8 * 257, 295)
+        a = a.reshape(-1, 8 * self.dim_f, self.dim_t)
 
         s1 = torch.transpose(s1, 1, 2)
         v1 = self.visual_layers(s1)
-        v1 = F.interpolate(v1, size=295, mode='nearest')
+        v1 = F.interpolate(v1, size=self.dim_t, mode='nearest')
 
         s2 = torch.transpose(s2, 1, 2)
         v2 = self.visual_layers(s2)
-        v2 = F.interpolate(v2, size=295, mode='nearest')
+        v2 = F.interpolate(v2, size=self.dim_t, mode='nearest')
 
         x = torch.cat([a, v1, v2], dim=1)
         x = x.transpose(1, 2)
@@ -48,10 +51,10 @@ class TwoSpeakerCPNet(nn.Module):
         x = self.bn3(self.activation(self.linear3(x)))
 
         m1 = self.mask_head1(x)
-        m1 = m1.reshape(-1, 295, 257, 2)
+        m1 = m1.reshape(-1, self.dim_t, self.dim_f, 2)
         m1 = m1.transpose(1, 2)
         m2 = self.mask_head1(x)
-        m2 = m2.reshape(-1, 295, 257, 2)
+        m2 = m2.reshape(-1, self.dim_t, self.dim_f, 2)
         m2 = m2.transpose(1, 2)
 
         # complex multiplication
@@ -129,7 +132,7 @@ class VisualModule(nn.Module):
     """
     Convolutional layers that process visual inputs
     """
-    def __init__(self, ):
+    def __init__(self,):
         super().__init__()
 
         self.layer = nn.Sequential(
@@ -157,18 +160,18 @@ class VisualModule(nn.Module):
         return self.layer(x)
 
 class LSTMBackbone(nn.Module):
-    def __init__(self, ):
+    def __init__(self, dim_f):
         super().__init__()
-        self.lstm = nn.LSTM(input_size=8*257 + 128, hidden_size=200, batch_first=True, bidirectional=True)
+        self.lstm = nn.LSTM(input_size=8*dim_f + 128, hidden_size=200, batch_first=True, bidirectional=True)
     
     def forward(self, x):
         x, (_, _) = self.lstm(x)
         return x
 
 class TransformerBackbone(nn.Module):
-    def __init__(self, ):
+    def __init__(self, dim_f):
         super().__init__()
-        self.linear = nn.Linear(8*257 + 128, 400)
+        self.linear = nn.Linear(8*dim_f + 128, 400)
         layer = nn.TransformerEncoderLayer(d_model=400, nhead=8, dim_feedforward=1024, batch_first=True)
         self.encoder = nn.TransformerEncoder(layer, 1)
 
@@ -182,8 +185,13 @@ class TransformerBackbone(nn.Module):
 if __name__ == "__main__":
     from synthetic_data import TwoSpeakerData
 
-    model = TwoSpeakerCPNet()
-    dataset = TwoSpeakerData("data/train_dataset")
+    n_fft = 256
+    win_length = 256
+    hop_length = 128
+    dim_f = 129
+    dim_t = 345
+    model = TwoSpeakerCPNet(dim_f, dim_t)
+    dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
 
     iterator = iter(dataset)
     z, audio1, audio2, z1, z2, s1, s2 = next(iterator)

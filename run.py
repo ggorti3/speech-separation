@@ -8,7 +8,7 @@ from tqdm import tqdm
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device {}".format(DEVICE))
 
-def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr):
+def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft, win_length, hop_length):
 
     model = model.to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -34,10 +34,10 @@ def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr):
         with torch.no_grad():
             print("Epoch {}".format(e))
             print("    Train Running Loss: {}".format(cum_loss / len(train_dataloader)))
-            avg_sdr = two_speaker_evaluate(model, val_dataloader)
+            avg_sdr = two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length)
             print("    Val Average sdr: {}".format(avg_sdr))
 
-def two_speaker_evaluate(model, val_dataloader):
+def two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length):
     model.eval()
     cum_sdr = 0
     n_samples = 0
@@ -48,8 +48,8 @@ def two_speaker_evaluate(model, val_dataloader):
         s1 = s1.to(DEVICE)
         s2 = s2.to(DEVICE)
         z1_hat, z2_hat = model(z, s1, s2)
-        audio1_hat = torch.istft(torch.view_as_complex(z1_hat), n_fft=512, win_length=300, hop_length=150, onesided=True)
-        audio2_hat = torch.istft(torch.view_as_complex(z2_hat), n_fft=512, win_length=300, hop_length=150, onesided=True)
+        audio1_hat = torch.istft(torch.view_as_complex(z1_hat), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
+        audio2_hat = torch.istft(torch.view_as_complex(z2_hat), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
 
         sdr1 = signal_distortion_ratio(audio1_hat, audio1)
         sdr2 = signal_distortion_ratio(audio2_hat, audio2)
@@ -67,9 +67,15 @@ if __name__ == "__main__":
 
     lr = 3e-5
     epochs = 1
-    batch_size = 30
+    batch_size = 20
 
-    train_dataset = TwoSpeakerData("data/train_dataset")
+    n_fft = 256
+    win_length = 256
+    hop_length = 128
+    dim_f = 129
+    dim_t = 345
+
+    train_dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
     train_dataloader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,
@@ -79,7 +85,7 @@ if __name__ == "__main__":
         pin_memory=True
     )
 
-    val_dataset = TwoSpeakerData("data/val_dataset")
+    val_dataset = TwoSpeakerData("data/val_dataset", n_fft, win_length, hop_length)
     val_dataloader = DataLoader(
         dataset=val_dataset,
         batch_size=batch_size,
@@ -89,13 +95,16 @@ if __name__ == "__main__":
         pin_memory=True
     )
 
-    model = TwoSpeakerCPNet()
+    model = TwoSpeakerCPNet(dim_f, dim_t)
     two_speaker_train(
         model=model,
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
         epochs=epochs,
-        lr=lr
+        lr=lr,
+        n_fft=n_fft,
+        win_length=win_length,
+        hop_length=hop_length
     )
     
 

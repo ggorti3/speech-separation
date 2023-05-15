@@ -11,11 +11,14 @@ from torch.utils.data import Dataset
 torch.set_default_dtype(torch.float)
 
 class TwoSpeakerData(Dataset):
-    def __init__(self, dataset_path):
+    def __init__(self, dataset_path, n_fft, win_length, hop_length):
         self.paths = []
         for root, dirs, _ in os.walk(dataset_path, topdown=False):
             for name in dirs:
                 self.paths.append(os.path.join(root, name))
+        self.n_fft = n_fft
+        self.win_length = win_length
+        self.hop_length = hop_length
     
     def __len__(self):
         return (len(self.paths) * (len(self.paths) - 1)) // 2
@@ -45,14 +48,13 @@ class TwoSpeakerData(Dataset):
         audio1 = audio1[588*i:588*i+44100]
         encoding_stream1 = encoding_stream1[i:i+75]
         # perform stft
-        #_, _, z1 = stft(audio1, nperseg=400, noverlap=200, nfft=512)
         audio1 = torch.tensor(audio1)
         z1 = stft(
             audio1,
-            n_fft=512,
-            win_length=300,
-            hop_length=150,
-            window=hann_window(300),
+            n_fft=self.n_fft,
+            win_length=self.win_length,
+            hop_length=self.hop_length,
+            window=hann_window(self.win_length),
             onesided=True,
             return_complex=True
         )
@@ -70,14 +72,13 @@ class TwoSpeakerData(Dataset):
         i = random.randrange(0, ((audio2.shape[0] - 44100) // (588)) + 1)
         audio2 = audio2[588*i:588*i+44100]
         encoding_stream2 = encoding_stream2[i:i+75]
-        #_, _, z2 = stft(audio2, nperseg=400, noverlap=200, nfft=512)
         audio2 = torch.tensor(audio2)
         z2 = stft(
             audio2,
-            n_fft=512,
-            win_length=300,
-            hop_length=150,
-            window=hann_window(300),
+            n_fft=self.n_fft,
+            win_length=self.win_length,
+            hop_length=self.hop_length,
+            window=hann_window(self.win_length),
             onesided=True,
             return_complex=True
         )
@@ -105,13 +106,16 @@ class TwoSpeakerData(Dataset):
 if __name__ == "__main__":
     from torch import istft
 
-    dataset = TwoSpeakerData("../avspeech_data/")
+    n_fft = 256
+    win_length = 256
+    hop_length = 128
+    dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
     iterator = iter(dataset)
-    for i in range(0):
+    for i in range(102):
         next(iterator)
     z, _, _, _, _, _, _ = next(iterator)
     z = torch.complex(z[:, :, 0], z[:, :, 1])
-    audio = istft(z, n_fft=512, win_length=300, hop_length=150, onesided=True)
+    audio = istft(z, n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
     audio = (audio * 32768).type(torch.int16)
     audio = audio.numpy()
     print(z.shape)
