@@ -15,7 +15,7 @@ class TwoSpeakerRCPNet(nn.Module):
         self.encoder = nn.TransformerEncoder(layer, 1)
         #self.lstm = nn.LSTM(input_size=dim_h, hidden_size=dim_h, batch_first=True, bidirectional=True)
 
-        self.linear1 = nn.Linear(2 * dim_h, 512)
+        self.linear1 = nn.Linear(dim_h, 512)
         self.bn1 = nn.BatchNorm1d(num_features=dim_t)
         self.linear2 = nn.Linear(512, 512)
         self.bn2 = nn.BatchNorm1d(num_features=dim_t)

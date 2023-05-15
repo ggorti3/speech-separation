@@ -32,9 +32,6 @@ def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft
                 if i % 50000 == 0:
                     print("Train Running Loss: {}".format(cum_loss / (i + 1)))
 
-            if i == 5:
-                break
-
         with torch.no_grad():
             print("Epoch {}".format(e))
             print("    Train Running Loss: {}".format(cum_loss / len(train_dataloader)))
@@ -73,7 +70,7 @@ if __name__ == "__main__":
     from synthetic_data import TwoSpeakerData
 
     lr = 3e-5
-    epochs = 1
+    epochs = 5
     batch_size = 50
 
     n_fft = 512
