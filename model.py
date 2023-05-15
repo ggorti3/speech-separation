@@ -68,9 +68,6 @@ class TwoSpeakerCPNet(nn.Module):
 
         return z1, z2
 
-
-
-
 class AudioModule(nn.Module):
     """
     Convolutional layers that process audio inputs
@@ -158,6 +155,26 @@ class VisualModule(nn.Module):
     
     def forward(self, x):
         return self.layer(x)
+
+class ResNetAudioModule(nn.Module):
+    """
+    Convolutional layers that process audio inputs
+    """
+    def __init__(self, ):
+        super().__init__()
+    
+    def forward(self, x):
+        pass
+
+class ResNetVisualModule(nn.Module):
+    """
+    Convolutional layers that process audio inputs
+    """
+    def __init__(self, ):
+        super().__init__()
+    
+    def forward(self, x):
+        pass
 
 class LSTMBackbone(nn.Module):
     def __init__(self, dim_f):
