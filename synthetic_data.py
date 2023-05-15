@@ -106,9 +106,9 @@ class TwoSpeakerData(Dataset):
 if __name__ == "__main__":
     from torch import istft
 
-    n_fft = 256
-    win_length = 256
-    hop_length = 128
+    n_fft = 512
+    win_length = 300
+    hop_length = 150
     dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
     iterator = iter(dataset)
     for i in range(102):

@@ -116,6 +116,8 @@ def generate_dataset(data_path, parent_save_path):
 
             line = f.readline()
 
+def clean_data(data_path):
+    pass
 
 
 # if __name__ == "__main__":

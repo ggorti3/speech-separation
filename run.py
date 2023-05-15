@@ -62,18 +62,18 @@ def two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length):
 if __name__ == "__main__":
     from torch.utils.data import DataLoader
 
-    from model import TwoSpeakerCPNet
+    from resmodel import TwoSpeakerRCPNet
     from synthetic_data import TwoSpeakerData
 
     lr = 3e-5
     epochs = 1
-    batch_size = 20
+    batch_size = 50
 
-    n_fft = 256
-    win_length = 256
-    hop_length = 128
-    dim_f = 129
-    dim_t = 345
+    n_fft = 512
+    win_length = 300
+    hop_length = 150
+    dim_f = 257
+    dim_t = 295
 
     train_dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
     train_dataloader = DataLoader(
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         pin_memory=True
     )
 
-    model = TwoSpeakerCPNet(dim_f, dim_t)
+    model = TwoSpeakerRCPNet(dim_f, dim_t)
     two_speaker_train(
         model=model,
         train_dataloader=train_dataloader,

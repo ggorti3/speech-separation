@@ -166,13 +166,13 @@ class ResBlock(nn.Module):
 if __name__ == "__main__":
     from synthetic_data import TwoSpeakerData
 
-    n_fft = 256
-    win_length = 256
-    hop_length = 128
-    dim_f = 129
-    dim_t = 345
+    n_fft = 512
+    win_length = 300
+    hop_length = 150
+    dim_f = 257
+    dim_t = 295
     model = TwoSpeakerRCPNet(dim_f, dim_t)
-    dataset = TwoSpeakerData("../avspeech_data/", n_fft, win_length, hop_length)
+    dataset = TwoSpeakerData("data/train_dataset/", n_fft, win_length, hop_length)
 
     iterator = iter(dataset)
     z, audio1, audio2, z1, z2, s1, s2 = next(iterator)
