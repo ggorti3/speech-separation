@@ -13,6 +13,7 @@ def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft
 
     for e in range(epochs):
         cum_loss = 0
+        n_samples = 0
         model.train()
         for i, (z, _, _, z1, z2, s1, s2) in tqdm(enumerate(train_dataloader)):
             z = z.to(DEVICE)
@@ -22,46 +23,58 @@ def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft
             s2 = s2.to(DEVICE)
             z1_hat, z2_hat = model(z, s1, s2)
 
-            loss = (F.mse_loss(z1_hat, z1, reduction="sum") + F.mse_loss(z2_hat, z2, reduction="sum")) / z.shape[0]
+            loss = (F.mse_loss(z1_hat, z1, reduction="sum") + F.mse_loss(z2_hat, z2, reduction="sum"))
             loss.backward()
             optimizer.step()
 
             with torch.no_grad():
                 cum_loss += loss
+                n_samples += z.shape[0]
 
-                if i % 50000 == 0:
-                    print("Train Running Loss: {}".format(cum_loss / (i + 1)))
+                if i % 1000 == 0:
+                    print("Train Running Loss: {}".format(cum_loss / n_samples))
 
         with torch.no_grad():
             print("Epoch {}".format(e))
-            print("    Train Running Loss: {}".format(cum_loss / len(train_dataloader)))
-            avg_sdr = two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length)
-            print("    Val Average sdr: {}".format(avg_sdr))
+            print("    Train Avg Loss: {}".format(cum_loss / n_samples))
+            avg_sdr, median_sdr, avg_loss = two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length)
+            print("    Val Avg Loss: {}".format(avg_loss))
+            print("    Val Avg sdr: {}".format(avg_sdr))
+            print("    Val Median sdr: {}".format(median_sdr))
 
-            torch.save(model.state_dict(), save_path + "rcpnet_epoch{}.pt".format(e))
+            torch.save(model.state_dict(), save_path + "rcpnet_epoch{}.pt".format(e + 2))
 
 def two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length):
     model.eval()
     cum_sdr = 0
+    cum_loss = 0
     n_samples = 0
-    for i, (z, audio1, audio2, _, _, s1, s2) in tqdm(enumerate(val_dataloader)):
-        z = z.to(DEVICE)
-        s1 = s1.to(DEVICE)
-        s2 = s2.to(DEVICE)
-        z1_hat, z2_hat = model(z, s1, s2)
+    sdrs = torch.zeros((0,))
+    for i, (z, audio1, audio2, z1, z2, s1, s2) in tqdm(enumerate(val_dataloader)):
+        with torch.no_grad():
+            z = z.to(DEVICE)
+            z1 = z1.to(DEVICE)
+            z2 = z2.to(DEVICE)
+            s1 = s1.to(DEVICE)
+            s2 = s2.to(DEVICE)
+            z1_hat, z2_hat = model(z, s1, s2)
 
-        z1_hat = z1_hat.detach().cpu()
-        z2_hat = z2_hat.detach().cpu()
-        audio1_hat = torch.istft(torch.view_as_complex(z1_hat), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
-        audio2_hat = torch.istft(torch.view_as_complex(z2_hat), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
+            cum_loss += (F.mse_loss(z1_hat, z1, reduction="sum") + F.mse_loss(z2_hat, z2, reduction="sum"))
 
-        sdr1 = signal_distortion_ratio(audio1_hat, audio1, load_diag=1e-6)
-        sdr2 = signal_distortion_ratio(audio2_hat, audio2, load_diag=1e-6)
+            z1_hat = z1_hat.detach().cpu()
+            z2_hat = z2_hat.detach().cpu()
+            audio1_hat = torch.istft(torch.view_as_complex(z1_hat), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
+            audio2_hat = torch.istft(torch.view_as_complex(z2_hat), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
 
-        n_samples += sdr1.shape[0] + sdr2.shape[0]
-        cum_sdr += (torch.sum(sdr1) + torch.sum(sdr2)).item()
-    avg_sdr = (cum_sdr / n_samples) if n_samples > 0 else 0
-    return avg_sdr
+            sdr1 = signal_distortion_ratio(audio1_hat, audio1, load_diag=1e-6)
+            sdr2 = signal_distortion_ratio(audio2_hat, audio2, load_diag=1e-6)
+
+            sdrs = torch.cat([sdrs, sdr1, sdr2])
+            n_samples += z.shape[0]
+    avg_sdr = torch.mean(sdrs)
+    median_sdr = torch.median(sdrs)
+    avg_loss = cum_loss / n_samples
+    return avg_sdr, median_sdr, avg_loss
 
 if __name__ == "__main__":
     from torch.utils.data import DataLoader
@@ -69,7 +82,7 @@ if __name__ == "__main__":
     from resmodel import TwoSpeakerRCPNet
     from synthetic_data import TwoSpeakerData
 
-    lr = 3e-5
+    lr = 3e-7
     epochs = 5
     batch_size = 50
 
@@ -100,6 +113,7 @@ if __name__ == "__main__":
     )
 
     model = TwoSpeakerRCPNet(dim_f, dim_t)
+    model.load_state_dict(torch.load("rcpnet_epoch1.pt"))
     model = model.to(DEVICE)
     two_speaker_train(
         model=model,
@@ -112,6 +126,16 @@ if __name__ == "__main__":
         hop_length=hop_length,
         save_path = "./"
     )
+    # avg_sdr, median_sdr, avg_loss = two_speaker_evaluate(
+    #     model,
+    #     val_dataloader,
+    #     n_fft,
+    #     win_length,
+    #     hop_length
+    # )
+    # print("Val Avg Loss: {}".format(avg_loss))
+    # print("Val Avg sdr: {}".format(avg_sdr))
+    # print("Val Median sdr: {}".format(median_sdr))
     
 
 

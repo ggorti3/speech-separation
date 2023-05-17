@@ -12,17 +12,9 @@ class TwoSpeakerRCPNet(nn.Module):
 
         dim_h = 128 + 2 * (dim_f - 1)
         layer = nn.TransformerEncoderLayer(d_model=dim_h, nhead=8, dim_feedforward=1024, batch_first=True)
-        self.encoder = nn.TransformerEncoder(layer, 1)
-        #self.lstm = nn.LSTM(input_size=dim_h, hidden_size=dim_h, batch_first=True, bidirectional=True)
-
-        self.linear1 = nn.Linear(dim_h, 512)
-        self.bn1 = nn.BatchNorm1d(num_features=dim_t)
-        self.linear2 = nn.Linear(512, 512)
-        self.bn2 = nn.BatchNorm1d(num_features=dim_t)
-        self.linear3 = nn.Linear(512, 512)
-        self.bn3 = nn.BatchNorm1d(num_features=dim_t)
-        self.mask_head1 = nn.Linear(512, dim_f * 2)
-        self.mask_head2 = nn.Linear(512, dim_f * 2)
+        self.encoder = nn.TransformerEncoder(layer, 4)
+        self.mask_head1 = nn.Linear(dim_h, dim_f * 2)
+        self.mask_head2 = nn.Linear(dim_h, dim_f * 2)
 
         self.activation = nn.ReLU()
 
@@ -53,11 +45,6 @@ class TwoSpeakerRCPNet(nn.Module):
 
 
         x = self.encoder(x)
-        #x, (_, _) = self.lstm(x)
-
-        x = self.bn1(self.activation(self.linear1(x)))
-        x = self.bn2(self.activation(self.linear2(x)))
-        x = self.bn3(self.activation(self.linear3(x)))
 
         m1 = self.mask_head1(x)
         m1 = m1.reshape(-1, self.dim_t, self.dim_f, 2)
@@ -67,9 +54,9 @@ class TwoSpeakerRCPNet(nn.Module):
         m2 = m2.transpose(1, 2)
 
         # complex multiplication
-        z1_real = z[:, :, :, 0] * m1[:, :, :, 0] - z[:, :, :, 0] * m1[:, :, :, 0]
+        z1_real = z[:, :, :, 0] * m1[:, :, :, 0] - z[:, :, :, 1] * m1[:, :, :, 1]
         z1_imag = z[:, :, :, 0] * m1[:, :, :, 1] + z[:, :, :, 1] * m1[:, :, :, 0]
-        z2_real = z[:, :, :, 0] * m2[:, :, :, 0] - z[:, :, :, 0] * m2[:, :, :, 0]
+        z2_real = z[:, :, :, 0] * m2[:, :, :, 0] - z[:, :, :, 1] * m2[:, :, :, 1]
         z2_imag = z[:, :, :, 0] * m2[:, :, :, 1] + z[:, :, :, 1] * m2[:, :, :, 0]
 
         z1 = torch.stack([z1_real, z1_imag], dim=3)

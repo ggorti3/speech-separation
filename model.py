@@ -58,9 +58,9 @@ class TwoSpeakerCPNet(nn.Module):
         m2 = m2.transpose(1, 2)
 
         # complex multiplication
-        z1_real = z[:, :, :, 0] * m1[:, :, :, 0] - z[:, :, :, 0] * m1[:, :, :, 0]
+        z1_real = z[:, :, :, 0] * m1[:, :, :, 0] - z[:, :, :, 1] * m1[:, :, :, 1]
         z1_imag = z[:, :, :, 0] * m1[:, :, :, 1] + z[:, :, :, 1] * m1[:, :, :, 0]
-        z2_real = z[:, :, :, 0] * m2[:, :, :, 0] - z[:, :, :, 0] * m2[:, :, :, 0]
+        z2_real = z[:, :, :, 0] * m2[:, :, :, 0] - z[:, :, :, 1] * m2[:, :, :, 1]
         z2_imag = z[:, :, :, 0] * m2[:, :, :, 1] + z[:, :, :, 1] * m2[:, :, :, 0]
 
         z1 = torch.stack([z1_real, z1_imag], dim=3)
