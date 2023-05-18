@@ -53,14 +53,18 @@ class TwoSpeakerRCPNet(nn.Module):
         m2 = m2.reshape(-1, self.dim_t, self.dim_f, 2)
         m2 = m2.transpose(1, 2)
 
-        # complex multiplication
-        z1_real = z[:, :, :, 0] * m1[:, :, :, 0] - z[:, :, :, 1] * m1[:, :, :, 1]
-        z1_imag = z[:, :, :, 0] * m1[:, :, :, 1] + z[:, :, :, 1] * m1[:, :, :, 0]
-        z2_real = z[:, :, :, 0] * m2[:, :, :, 0] - z[:, :, :, 1] * m2[:, :, :, 1]
-        z2_imag = z[:, :, :, 0] * m2[:, :, :, 1] + z[:, :, :, 1] * m2[:, :, :, 0]
+        # # complex multiplication
+        # z1_real = z[:, :, :, 0] * m1[:, :, :, 0] - z[:, :, :, 1] * m1[:, :, :, 1]
+        # z1_imag = z[:, :, :, 0] * m1[:, :, :, 1] + z[:, :, :, 1] * m1[:, :, :, 0]
+        # z2_real = z[:, :, :, 0] * m2[:, :, :, 0] - z[:, :, :, 1] * m2[:, :, :, 1]
+        # z2_imag = z[:, :, :, 0] * m2[:, :, :, 1] + z[:, :, :, 1] * m2[:, :, :, 0]
 
-        z1 = torch.stack([z1_real, z1_imag], dim=3)
-        z2 = torch.stack([z2_real, z2_imag], dim=3)
+        # z1 = torch.stack([z1_real, z1_imag], dim=3)
+        # z2 = torch.stack([z2_real, z2_imag], dim=3)
+
+        # regular multiplication
+        z1 = z * m1
+        z2 = z * m2
 
         return z1, z2
 
