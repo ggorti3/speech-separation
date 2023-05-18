@@ -115,55 +115,48 @@ if __name__ == "__main__":
     import time
     from tqdm import tqdm
 
-    # n_fft = 512
-    # win_length = 300
-    # hop_length = 150
-    # dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
-    # iterator = iter(dataset)
-    # for i in range(102):
-    #     next(iterator)
-    # z, _, _, _, _, _, _ = next(iterator)
-    # z = torch.complex(z[:, :, 0], z[:, :, 1])
-    # audio = istft(z, n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
-    # audio = (audio * 32768).type(torch.int16)
-    # audio = audio.numpy()
-    # print(z.shape)
-    # print(audio.shape)
-    # scipy.io.wavfile.write("sample.wav", 14700, audio)
-
-    batch_size = 50
     n_fft = 512
     win_length = 300
     hop_length = 150
-    dim_f = 257
-    dim_t = 295
+    dataset = TwoSpeakerData("../avspeech_data/", n_fft, win_length, hop_length)
+    iterator = iter(dataset)
+    for i in range(102):
+        next(iterator)
+    z, _, _, _, _, _, _ = next(iterator)
+    z = torch.complex(z[:, :, 0], z[:, :, 1])
+    audio = istft(z, n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
+    print(audio)
+    audio = (audio * 32768).type(torch.int16)
+    print(audio)
+    audio = audio.numpy()
+    print(z.shape)
+    print(audio.shape)
+    scipy.io.wavfile.write("sample.wav", 14700, audio)
 
-    train_dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
-    train_dataloader = DataLoader(
-        dataset=train_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=train_dataset.collate_fn,
-        num_workers=4,
-        pin_memory=True
-    )
+    # batch_size = 50
+    # n_fft = 512
+    # win_length = 300
+    # hop_length = 150
+    # dim_f = 257
+    # dim_t = 295
 
-    val_dataset = TwoSpeakerData("data/val_dataset", n_fft, win_length, hop_length)
-    val_dataloader = DataLoader(
-        dataset=val_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        collate_fn=val_dataset.collate_fn,
-        num_workers=4,
-        pin_memory=True
-    )
+    # train_dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
+    # train_dataloader = DataLoader(
+    #     dataset=train_dataset,
+    #     batch_size=batch_size,
+    #     shuffle=True,
+    #     collate_fn=train_dataset.collate_fn,
+    #     num_workers=4,
+    #     pin_memory=True
+    # )
 
-    t1 = time.time()
-    # for i, _ in tqdm(enumerate(train_dataloader)):
-    #     _
-    t2 = time.time()
-    print("{} seconds to iterate train dataloader".format(t2 - t1))
-    for i, _ in tqdm(enumerate(val_dataloader)):
-        _
-    t3 = time.time()
-    print("{} seconds to iterate val dataloader".format(t3 - t2))
+    # val_dataset = TwoSpeakerData("data/val_dataset", n_fft, win_length, hop_length)
+    # val_dataloader = DataLoader(
+    #     dataset=val_dataset,
+    #     batch_size=batch_size,
+    #     shuffle=False,
+    #     collate_fn=val_dataset.collate_fn,
+    #     num_workers=4,
+    #     pin_memory=True
+    # )
+

@@ -49,7 +49,7 @@ class TwoSpeakerRCPNet(nn.Module):
         m1 = self.mask_head1(x)
         m1 = m1.reshape(-1, self.dim_t, self.dim_f, 2)
         m1 = m1.transpose(1, 2)
-        m2 = self.mask_head1(x)
+        m2 = self.mask_head2(x)
         m2 = m2.reshape(-1, self.dim_t, self.dim_f, 2)
         m2 = m2.transpose(1, 2)
 
