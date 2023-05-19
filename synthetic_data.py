@@ -115,19 +115,17 @@ if __name__ == "__main__":
     import time
     from tqdm import tqdm
 
-    n_fft = 512
-    win_length = 300
-    hop_length = 150
-    dataset = TwoSpeakerData("../avspeech_data/", n_fft, win_length, hop_length)
+    n_fft = 256
+    win_length = 256
+    hop_length = 128
+    dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
     iterator = iter(dataset)
     for i in range(102):
         next(iterator)
-    z, _, _, _, _, _, _ = next(iterator)
-    z = torch.complex(z[:, :, 0], z[:, :, 1])
+    z, _, _, z1, z2, _, _ = next(iterator)
+    z = torch.view_as_complex(z2)
     audio = istft(z, n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
-    print(audio)
     audio = (audio * 32768).type(torch.int16)
-    print(audio)
     audio = audio.numpy()
     print(z.shape)
     print(audio.shape)

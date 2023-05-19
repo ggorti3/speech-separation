@@ -5,14 +5,14 @@ import torch.nn.functional as F
 torch.set_default_dtype(torch.float)
 
 class TwoSpeakerRCPNet(nn.Module):
-    def __init__(self, dim_f, dim_t):
+    def __init__(self, dim_f, dim_t, enc_layers=4):
         super().__init__()
         self.visual_layers = ResNetVisualModule()
         self.audio_layers = ResNetAudioModule()
 
         dim_h = 128 + 2 * (dim_f - 1)
         layer = nn.TransformerEncoderLayer(d_model=dim_h, nhead=8, dim_feedforward=1024, batch_first=True)
-        self.encoder = nn.TransformerEncoder(layer, 4)
+        self.encoder = nn.TransformerEncoder(layer, enc_layers)
         self.mask_head1 = nn.Linear(dim_h, dim_f * 2)
         self.mask_head2 = nn.Linear(dim_h, dim_f * 2)
 

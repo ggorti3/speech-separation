@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -25,7 +27,24 @@ def process_audio(model, z, audio1, audio2, z1, z2, s1, s2, n_fft, win_length, h
 
         sdr1 = signal_distortion_ratio(audio1_hat, audio1, load_diag=1e-6)
         sdr2 = signal_distortion_ratio(audio2_hat, audio2, load_diag=1e-6)
-    return audio1_hat, audio2_hat, sdr1, sdr2, loss
+    return z1_hat, z2_hat, audio1_hat, audio2_hat, sdr1, sdr2, loss
+
+def plot_spectrograms(z, z1, z2):
+    fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(3, 2)
+    print(z[:, :, 0])
+    ax1.imshow(z[:, :, 0], norm=Normalize())
+    ax1.set_title("true real")
+    ax2.imshow(z[:, :, 1])
+    ax2.set_title("true imag")
+    ax3.imshow(z1[:, :, 0])
+    ax3.set_title("z1 real")
+    ax4.imshow(z1[:, :, 1])
+    ax4.set_title("z1 imag")
+    ax5.imshow(z2[:, :, 0])
+    ax5.set_title("z2 real")
+    ax6.imshow(z2[:, :, 1])
+    ax6.set_title("z2 imag")
+    fig.savefig("spectrograms")
 
 
 if __name__ == "__main__":
@@ -40,7 +59,7 @@ if __name__ == "__main__":
     dim_f = 257
     dim_t = 295
 
-    val_dataset = TwoSpeakerData("../avspeech_data/", n_fft, win_length, hop_length)
+    val_dataset = TwoSpeakerData("data/val_dataset", n_fft, win_length, hop_length)
     val_dataloader = DataLoader(
         dataset=val_dataset,
         batch_size=1,
@@ -49,12 +68,15 @@ if __name__ == "__main__":
     )
     iterator = iter(val_dataloader)
 
+    for i in range(1):
+        _ = next(iterator)
+
     z, audio1, audio2, z1, z2, s1, s2 = next(iterator)
 
     model = TwoSpeakerRCPNet(dim_f, dim_t)
-    #model.load_state_dict(torch.load("rcpnet_epoch4.pt"))
+    model.load_state_dict(torch.load("rcpnet_realmask_epoch0.pt"))
     model = model.to(DEVICE)
-    audio1_hat, audio2_hat, sdr1, sdr2, loss = process_audio(
+    z1_hat, z2_hat, audio1_hat, audio2_hat, sdr1, sdr2, loss = process_audio(
         model=model,
         z=z,
         audio1=audio1,
@@ -68,17 +90,23 @@ if __name__ == "__main__":
         hop_length=hop_length
     )
 
-    audio1_hat = audio1_hat[0]
-    audio2_hat = audio2_hat[0]
+    # audio1_hat = audio1_hat[0]
+    # audio2_hat = audio2_hat[0]
 
-    audio1_hat[audio1_hat > 32767 / 32768] = 32767 / 32768
-    audio1_hat[audio1_hat < -1] = -1
-    audio1_hat = (audio1_hat * 32768).type(torch.int16)
-    audio1_hat = audio1_hat.numpy()
-    scipy.io.wavfile.write("audio1.wav", 14700, audio1_hat)
-    audio2_hat[audio2_hat > 32767 / 32768] = 32767 / 32768
-    audio2_hat[audio2_hat < -1] = -1
-    audio2_hat = (audio2_hat * 32768).type(torch.int16)
-    audio2_hat = audio2_hat.numpy()
-    scipy.io.wavfile.write("audio2.wav", 14700, audio2_hat)
+    # audio1_hat[audio1_hat > 32767 / 32768] = 32767 / 32768
+    # audio1_hat[audio1_hat < -1] = -1
+    # audio1_hat = (audio1_hat * 32768).type(torch.int16)
+    # audio1_hat = audio1_hat.numpy()
+    # scipy.io.wavfile.write("audio1.wav", 14700, audio1_hat)
+    # audio2_hat[audio2_hat > 32767 / 32768] = 32767 / 32768
+    # audio2_hat[audio2_hat < -1] = -1
+    # audio2_hat = (audio2_hat * 32768).type(torch.int16)
+    # audio2_hat = audio2_hat.numpy()
+    # scipy.io.wavfile.write("audio2.wav", 14700, audio2_hat)
+
+    print(loss)
+    print(sdr1)
+    print(sdr2)
+
+    plot_spectrograms(z[0], z1_hat[0], z2_hat[0])
     

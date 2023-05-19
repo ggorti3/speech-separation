@@ -42,7 +42,7 @@ def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft
             print("    Val Avg sdr: {}".format(avg_sdr))
             print("    Val Median sdr: {}".format(median_sdr))
 
-            torch.save(model.state_dict(), save_path + "rcpnet_epoch{}.pt".format(e + 2))
+            torch.save(model.state_dict(), save_path + "rcpnet_epoch{}.pt".format(e))
 
 def two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length):
     model.eval()
@@ -59,7 +59,7 @@ def two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length):
             s2 = s2.to(DEVICE)
             z1_hat, z2_hat = model(z, s1, s2)
 
-            cum_loss += (F.mse_loss(z1_hat, z1, reduction="sum") + F.mse_loss(z2_hat, z2, reduction="sum"))
+            cum_loss += torch.sum(torch.maximum(torch.sum(F.mse_loss(z1_hat, z1, reduction="none"), dim=(1, 2, 3)), torch.sum(F.mse_loss(z2_hat, z2, reduction="none"), dim=(1, 2, 3))))
 
             z1_hat = z1_hat.detach().cpu()
             z2_hat = z2_hat.detach().cpu()
@@ -82,15 +82,15 @@ if __name__ == "__main__":
     from resmodel import TwoSpeakerRCPNet
     from synthetic_data import TwoSpeakerData
 
-    lr = 3e-7
+    lr = 1e-5
     epochs = 5
-    batch_size = 50
+    batch_size = 70
 
-    n_fft = 512
-    win_length = 300
-    hop_length = 150
-    dim_f = 257
-    dim_t = 295
+    n_fft = 256
+    win_length = 256
+    hop_length = 128
+    dim_f = 129
+    dim_t = 345
 
     train_dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
     train_dataloader = DataLoader(
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     )
 
     model = TwoSpeakerRCPNet(dim_f, dim_t)
-    model.load_state_dict(torch.load("rcpnet_epoch1.pt"))
+    #model.load_state_dict(torch.load("rcpnet_realmask_epoch0.pt"))
     model = model.to(DEVICE)
     two_speaker_train(
         model=model,
