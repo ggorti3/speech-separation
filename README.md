@@ -1,2 +1,2 @@
 # speech-separation
-Use Deep Learning to seperate multiple speaker audio
+Use Deep Learning to separate multiple speaker audio
