@@ -63,8 +63,8 @@ def two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length):
 
             z1_hat = z1_hat.detach().cpu()
             z2_hat = z2_hat.detach().cpu()
-            audio1_hat = torch.istft(torch.view_as_complex(z1_hat), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
-            audio2_hat = torch.istft(torch.view_as_complex(z2_hat), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
+            audio1_hat = torch.istft(torch.view_as_complex(z1_hat)**(1/0.3), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
+            audio2_hat = torch.istft(torch.view_as_complex(z2_hat)**(1/0.3), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
 
             sdr1 = signal_distortion_ratio(audio1_hat, audio1, load_diag=1e-6)
             sdr2 = signal_distortion_ratio(audio2_hat, audio2, load_diag=1e-6)
@@ -86,11 +86,11 @@ if __name__ == "__main__":
     epochs = 5
     batch_size = 70
 
-    n_fft = 256
-    win_length = 256
-    hop_length = 128
-    dim_f = 129
-    dim_t = 345
+    n_fft = 512
+    win_length = 300
+    hop_length = 150
+    dim_f = 257
+    dim_t = 295
 
     train_dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
     train_dataloader = DataLoader(

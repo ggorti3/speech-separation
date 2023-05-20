@@ -61,7 +61,6 @@ class TwoSpeakerData(Dataset):
             onesided=True,
             return_complex=True
         )
-        z1 = torch.view_as_real(z1)
 
         # repeat for second clip
         encoding_stream2 = np.loadtxt(os.path.join(path2, "encoding_stream.csv"), delimiter=",", dtype=np.float32)
@@ -87,14 +86,18 @@ class TwoSpeakerData(Dataset):
             window=hann_window(self.win_length),
             onesided=True,
             return_complex=True
-        )
-        z2 = torch.view_as_real(z2)     
+        ) 
 
         z = z1 + z2
+        # power law compression
+        z = z**0.3
+        z1 = z1**0.3
+        z2 = z2**0.3
+
         s1 = torch.tensor(encoding_stream1)
         s2 = torch.tensor(encoding_stream2)
 
-        return z, audio1, audio2, z1, z2, s1, s2
+        return torch.view_as_real(z), audio1, audio2, torch.view_as_real(z1), torch.view_as_real(z2), s1, s2
 
     def collate_fn(self, items):
         var_lists = [[] for i in range(len(items[0]))]
@@ -115,15 +118,16 @@ if __name__ == "__main__":
     import time
     from tqdm import tqdm
 
-    n_fft = 256
-    win_length = 256
-    hop_length = 128
-    dataset = TwoSpeakerData("data/train_dataset", n_fft, win_length, hop_length)
+    n_fft = 512
+    win_length = 300
+    hop_length = 150
+    dataset = TwoSpeakerData("../avspeech_data", n_fft, win_length, hop_length)
     iterator = iter(dataset)
     for i in range(102):
         next(iterator)
     z, _, _, z1, z2, _, _ = next(iterator)
-    z = torch.view_as_complex(z2)
+    z = torch.view_as_complex(z)
+    z = z**(1 / 0.3)
     audio = istft(z, n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
     audio = (audio * 32768).type(torch.int16)
     audio = audio.numpy()
