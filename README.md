@@ -1,2 +1,2 @@
-# auto-editor
-Use Deep Learning to automatically edit multicam videos
+# speech-separation
+Use Deep Learning to seperate multiple speaker audio
