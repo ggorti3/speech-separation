@@ -116,7 +116,7 @@ class ResNetVisualModule(nn.Module):
     def __init__(self, ):
         super().__init__()
 
-        self.conv1 = nn.Conv1d(in_channels=128, out_channels=64, kernel_size=7, stride=2, padding=3)
+        self.conv1 = nn.Conv1d(in_channels=128, out_channels=64, kernel_size=7, stride=1, padding=3)
         self.bn1 = nn.BatchNorm1d(num_features=64)
         self.activation = nn.ReLU()
 
