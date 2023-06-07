@@ -9,12 +9,16 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device {}".format(DEVICE))
 
 def loss_func(z1_hat, z2_hat, z1, z2):
-    return torch.sum(torch.maximum(torch.sum(F.mse_loss(z1_hat, z1, reduction="none"), dim=(1, 2, 3)), torch.sum(F.mse_loss(z2_hat, z2, reduction="none"), dim=(1, 2, 3))))
+    #return torch.sum(torch.maximum(torch.sum(F.mse_loss(z1_hat, z1, reduction="none"), dim=(1, 2, 3)), torch.sum(F.mse_loss(z2_hat, z2, reduction="none"), dim=(1, 2, 3))))
     #return F.mse_loss(z1_hat, z1, reduction="sum") + F.mse_loss(z2_hat, z2, reduction="sum")
+    return torch.sum(torch.minimum(
+        torch.sum(F.mse_loss(z1_hat, z1, reduction="none") + F.mse_loss(z2_hat, z2, reduction="none"), dim=(1, 2, 3)), 
+        torch.sum(F.mse_loss(z1_hat, z2, reduction="none") + F.mse_loss(z2_hat, z1, reduction="none"), dim=(1, 2, 3))
+    ))
 
 def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft, win_length, hop_length, save_path):
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    scheduler = ExponentialLR(optimizer, gamma=0.5)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.5)
 
     for e in range(epochs):
         cum_loss = 0
@@ -47,7 +51,7 @@ def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft
             print("    Val Avg sdr: {}".format(avg_sdr))
             print("    Val Median sdr: {}".format(median_sdr))
 
-            torch.save(model.state_dict(), save_path + "rcpnet_epoch{}.pt".format(e))
+            torch.save(model.state_dict(), save_path + "sym_rcpnet_epoch{}.pt".format(e + 1))
         
         scheduler.step()
 
@@ -66,10 +70,27 @@ def two_speaker_evaluate(model, val_dataloader, n_fft, win_length, hop_length):
             s2 = s2.to(DEVICE)
             z1_hat, z2_hat = model(z, s1, s2)
 
-            cum_loss += loss_func(z1_hat, z2_hat, z1, z2)
+            order1 = torch.sum(F.mse_loss(z1_hat, z1, reduction="none") + F.mse_loss(z2_hat, z2, reduction="none"), dim=(1, 2, 3))
+            order2 = torch.sum(F.mse_loss(z1_hat, z2, reduction="none") + F.mse_loss(z2_hat, z1, reduction="none"), dim=(1, 2, 3))
+            loss = torch.sum(torch.minimum(order1, order2))
 
-            z1_hat = z1_hat.detach().cpu()
-            z2_hat = z2_hat.detach().cpu()
+            cum_loss += loss
+
+            order_bool = (order1 <= order2).unsqueeze(1).unsqueeze(2).unsqueeze(3)
+            ordered_z1_hat = torch.where(
+                order_bool,
+                z1_hat,
+                z2_hat
+            )
+
+            ordered_z2_hat = torch.where(
+                order_bool,
+                z2_hat,
+                z1_hat
+            )
+
+            z1_hat = ordered_z1_hat.detach().cpu()
+            z2_hat = ordered_z2_hat.detach().cpu()
             audio1_hat = torch.istft(torch.view_as_complex(z1_hat)**(1/0.3), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
             audio2_hat = torch.istft(torch.view_as_complex(z2_hat)**(1/0.3), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
 
@@ -89,9 +110,9 @@ if __name__ == "__main__":
     from resmodel import TwoSpeakerRCPNet
     from synthetic_data import TwoSpeakerData
 
-    lr = 5e-7
+    lr = 2.5e-7
     epochs = 5
-    batch_size = 28
+    batch_size = 40
 
     n_fft = 512
     win_length = 300
@@ -120,7 +141,7 @@ if __name__ == "__main__":
     )
 
     model = TwoSpeakerRCPNet(dim_f, dim_t, 8)
-    #model.load_state_dict(torch.load("rcpnet_epoch0.pt"))
+    model.load_state_dict(torch.load("sym_rcpnet_epoch0.pt"))
     model = model.to(DEVICE)
     two_speaker_train(
         model=model,
