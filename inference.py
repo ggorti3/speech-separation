@@ -88,13 +88,13 @@ if __name__ == "__main__":
     )
     iterator = iter(val_dataloader)
 
-    for i in range(4):
+    for i in range(20):
         _ = next(iterator)
 
     z, audio1, audio2, z1, z2, s1, s2 = next(iterator)
 
     model = TwoSpeakerRCPNet(dim_f, dim_t, 8)
-    model.load_state_dict(torch.load("sym_rcpnet_epoch0.pt"))
+    model.load_state_dict(torch.load("sym_rcpnet_epoch1.pt"))
     model = model.to(DEVICE)
     z1_hat, z2_hat, audio1_hat, audio2_hat, sdr1, sdr2, loss = process_audio(
         model=model,

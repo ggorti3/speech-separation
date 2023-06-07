@@ -18,7 +18,7 @@ def loss_func(z1_hat, z2_hat, z1, z2):
 
 def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft, win_length, hop_length, save_path):
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.5)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.2)
 
     for e in range(epochs):
         cum_loss = 0
@@ -51,7 +51,7 @@ def two_speaker_train(model, train_dataloader, val_dataloader, epochs, lr, n_fft
             print("    Val Avg sdr: {}".format(avg_sdr))
             print("    Val Median sdr: {}".format(median_sdr))
 
-            torch.save(model.state_dict(), save_path + "sym_rcpnet_epoch{}.pt".format(e + 1))
+            torch.save(model.state_dict(), save_path + "sym_rcpnet_epoch{}.pt".format(e + 2))
         
         scheduler.step()
 
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     from resmodel import TwoSpeakerRCPNet
     from synthetic_data import TwoSpeakerData
 
-    lr = 2.5e-7
+    lr = 1e-8
     epochs = 5
     batch_size = 40
 
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     )
 
     model = TwoSpeakerRCPNet(dim_f, dim_t, 8)
-    model.load_state_dict(torch.load("sym_rcpnet_epoch0.pt"))
+    model.load_state_dict(torch.load("sym_rcpnet_epoch1.pt"))
     model = model.to(DEVICE)
     two_speaker_train(
         model=model,
