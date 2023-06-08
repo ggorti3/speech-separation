@@ -9,8 +9,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device {}".format(DEVICE))
 
 def loss_func(z1_hat, z2_hat, z1, z2):
-    #return torch.sum(torch.maximum(torch.sum(F.mse_loss(z1_hat, z1, reduction="none"), dim=(1, 2, 3)), torch.sum(F.mse_loss(z2_hat, z2, reduction="none"), dim=(1, 2, 3))))
-    #return F.mse_loss(z1_hat, z1, reduction="sum") + F.mse_loss(z2_hat, z2, reduction="sum")
+    # return the minimum permutation mse loss
     return torch.sum(torch.minimum(
         torch.sum(F.mse_loss(z1_hat, z1, reduction="none") + F.mse_loss(z2_hat, z2, reduction="none"), dim=(1, 2, 3)), 
         torch.sum(F.mse_loss(z1_hat, z2, reduction="none") + F.mse_loss(z2_hat, z1, reduction="none"), dim=(1, 2, 3))
@@ -140,30 +139,40 @@ if __name__ == "__main__":
         pin_memory=True
     )
 
-    model = TwoSpeakerRCPNet(dim_f, dim_t, 8)
-    model.load_state_dict(torch.load("sym_rcpnet_epoch1.pt"))
-    model = model.to(DEVICE)
-    two_speaker_train(
-        model=model,
-        train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader,
-        epochs=epochs,
-        lr=lr,
-        n_fft=n_fft,
-        win_length=win_length,
-        hop_length=hop_length,
-        save_path = "./"
+    test_dataset = TwoSpeakerData("data/test_dataset", n_fft, win_length, hop_length)
+    test_dataloader = DataLoader(
+        dataset=test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=test_dataset.collate_fn,
+        num_workers=4,
+        pin_memory=True
     )
-    # avg_sdr, median_sdr, avg_loss = two_speaker_evaluate(
-    #     model,
-    #     val_dataloader,
-    #     n_fft,
-    #     win_length,
-    #     hop_length
+
+    model = TwoSpeakerRCPNet(dim_f, dim_t, 8)
+    model.load_state_dict(torch.load("sym_rcpnet_epoch2.pt"))
+    model = model.to(DEVICE)
+    # two_speaker_train(
+    #     model=model,
+    #     train_dataloader=train_dataloader,
+    #     val_dataloader=val_dataloader,
+    #     epochs=epochs,
+    #     lr=lr,
+    #     n_fft=n_fft,
+    #     win_length=win_length,
+    #     hop_length=hop_length,
+    #     save_path = "./"
     # )
-    # print("Val Avg Loss: {}".format(avg_loss))
-    # print("Val Avg sdr: {}".format(avg_sdr))
-    # print("Val Median sdr: {}".format(median_sdr))
+    avg_sdr, median_sdr, avg_loss = two_speaker_evaluate(
+        model,
+        test_dataloader,
+        n_fft,
+        win_length,
+        hop_length
+    )
+    print("Test Avg Loss: {}".format(avg_loss))
+    print("Test Avg sdr: {}".format(avg_sdr))
+    print("Test Median sdr: {}".format(median_sdr))
     
 
 

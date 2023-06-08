@@ -39,15 +39,17 @@ def process_audio(model, z, audio1, audio2, z1, z2, s1, s2, n_fft, win_length, h
             z1_hat
         )
 
+        z = z.detach().cpu()
         z1_hat = ordered_z1_hat.detach().cpu()
         z2_hat = ordered_z2_hat.detach().cpu()
         audio1_hat = torch.istft(torch.view_as_complex(z1_hat)**(1/0.3), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
         audio2_hat = torch.istft(torch.view_as_complex(z2_hat)**(1/0.3), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
+        audio = torch.istft(torch.view_as_complex(z)**(1/0.3), n_fft=n_fft, win_length=win_length, hop_length=hop_length, onesided=True)
 
         sdr1 = signal_distortion_ratio(audio1_hat, audio1, load_diag=1e-6)
         sdr2 = signal_distortion_ratio(audio2_hat, audio2, load_diag=1e-6)
         
-    return z1_hat, z2_hat, audio1_hat, audio2_hat, sdr1, sdr2, loss
+    return z1_hat, z2_hat, audio, audio1_hat, audio2_hat, sdr1, sdr2, loss
 
 def plot_spectrograms(z, z1, z2):
     fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(3, 2)
@@ -79,24 +81,24 @@ if __name__ == "__main__":
     dim_f = 257
     dim_t = 295
 
-    val_dataset = TwoSpeakerData("data/val_dataset", n_fft, win_length, hop_length)
-    val_dataloader = DataLoader(
-        dataset=val_dataset,
+    test_dataset = TwoSpeakerData("data/test_dataset", n_fft, win_length, hop_length)
+    test_dataloader = DataLoader(
+        dataset=test_dataset,
         batch_size=1,
         shuffle=False,
-        collate_fn=val_dataset.collate_fn,
+        collate_fn=test_dataset.collate_fn,
     )
-    iterator = iter(val_dataloader)
+    iterator = iter(test_dataloader)
 
-    for i in range(20):
+    for i in range(21):
         _ = next(iterator)
 
     z, audio1, audio2, z1, z2, s1, s2 = next(iterator)
 
     model = TwoSpeakerRCPNet(dim_f, dim_t, 8)
-    model.load_state_dict(torch.load("sym_rcpnet_epoch1.pt"))
+    model.load_state_dict(torch.load("rcpnet_epoch3.pt"))
     model = model.to(DEVICE)
-    z1_hat, z2_hat, audio1_hat, audio2_hat, sdr1, sdr2, loss = process_audio(
+    z1_hat, z2_hat, audio1_hat, audio2_hat, audio, sdr1, sdr2, loss = process_audio(
         model=model,
         z=z,
         audio1=audio1,
@@ -110,19 +112,28 @@ if __name__ == "__main__":
         hop_length=hop_length
     )
 
+
     audio1_hat = audio1_hat[0]
     audio2_hat = audio2_hat[0]
+    audio = audio[0]
 
     audio1_hat[audio1_hat > 32767 / 32768] = 32767 / 32768
     audio1_hat[audio1_hat < -1] = -1
     audio1_hat = (audio1_hat * 32768).type(torch.int16)
     audio1_hat = audio1_hat.numpy()
     scipy.io.wavfile.write("audio1.wav", 14700, audio1_hat)
+
     audio2_hat[audio2_hat > 32767 / 32768] = 32767 / 32768
     audio2_hat[audio2_hat < -1] = -1
     audio2_hat = (audio2_hat * 32768).type(torch.int16)
     audio2_hat = audio2_hat.numpy()
     scipy.io.wavfile.write("audio2.wav", 14700, audio2_hat)
+
+    audio[audio > 32767 / 32768] = 32767 / 32768
+    audio[audio < -1] = -1
+    audio = (audio * 32768).type(torch.int16)
+    audio = audio.numpy()
+    scipy.io.wavfile.write("audio.wav", 14700, audio)
 
     print(loss)
     print(sdr1)
